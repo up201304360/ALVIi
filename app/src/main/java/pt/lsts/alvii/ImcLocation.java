@@ -615,6 +615,9 @@ public class ImcLocation extends AppCompatActivity implements LocationListener, 
     }
 
     int convertSImeiToID(String text) {
+        if(text == null)
+            text = Calendar.getInstance().getTime().toString();
+
         int sum = 0;
         char imei[] = text.toCharArray();
         for (int i = 0; i < text.length(); i++)
