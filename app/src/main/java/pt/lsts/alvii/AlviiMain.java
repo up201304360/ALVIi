@@ -6,6 +6,7 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Build;
@@ -141,6 +142,7 @@ public class AlviiMain extends Activity {
                 Manifest.permission.WRITE_EXTERNAL_STORAGE,
                 Manifest.permission.ACCESS_NETWORK_STATE,
                 Manifest.permission.ACCESS_WIFI_STATE,
+                Manifest.permission.SEND_SMS,
                 //Manifest.permission.CAMERA,
                 Manifest.permission.VIBRATE,
                 Manifest.permission.ACCESS_FINE_LOCATION,

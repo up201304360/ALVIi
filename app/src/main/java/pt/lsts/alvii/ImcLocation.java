@@ -26,6 +26,7 @@ import android.os.Vibrator;
 import android.provider.Settings;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.telephony.SmsManager;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.view.ContextMenu;
@@ -81,6 +82,7 @@ public class ImcLocation extends AppCompatActivity implements LocationListener, 
     public static Activity fa_ImcLocation;
     final Context context = this;
     public boolean result_permission = true;
+    boolean deviceHaveSms;
     boolean firstBack = true;
     boolean isInitDone;
     private File storageDir = new File(Environment.getExternalStorageDirectory().getPath() + File.separator + "alvii");
@@ -166,6 +168,7 @@ public class ImcLocation extends AppCompatActivity implements LocationListener, 
                 Manifest.permission.WRITE_EXTERNAL_STORAGE,
                 Manifest.permission.ACCESS_NETWORK_STATE,
                 Manifest.permission.ACCESS_WIFI_STATE,
+                Manifest.permission.SEND_SMS,
                 //Manifest.permission.CAMERA,
                 Manifest.permission.ACCESS_FINE_LOCATION,
                 Manifest.permission.ACCESS_COARSE_LOCATION,
@@ -439,6 +442,13 @@ public class ImcLocation extends AppCompatActivity implements LocationListener, 
         mapFragment.getMapAsync(this);
         v = (Vibrator) this.context.getSystemService(Context.VIBRATOR_SERVICE);
         isInitDone = false;
+
+        PackageManager pm = this.getPackageManager();
+        if (pm.hasSystemFeature(PackageManager.FEATURE_TELEPHONY) || pm.hasSystemFeature(PackageManager.FEATURE_TELEPHONY_CDMA))
+           deviceHaveSms = true;
+        else
+            deviceHaveSms = false;
+
         requestForSpecificPermission();
         if (isWifiAvailable()) {
             boolean success;
@@ -492,6 +502,10 @@ public class ImcLocation extends AppCompatActivity implements LocationListener, 
             isToShowAllMantas = false;
             isToShowAllCCU = false;
             isInitDone = true;
+
+            //send message func
+            //sendSMS("+351xxxxxxxxx", "ALVIi hello :) ");
+
         } else {
             showErrorInfo("Please turn on Wifi");
         }
@@ -1318,5 +1332,25 @@ public class ImcLocation extends AppCompatActivity implements LocationListener, 
         Log.i(TAG, "STOP: " + sysName);
         acclBus.sendMessage(new TeleoperationDone(), sysName);
         acclBusListenner.sendToSpeak(sysName + ", is in service mode", true);
+    }
+
+    public boolean sendSMS(String toNum, String smsText) {
+        try
+        {
+            Toast.makeText(getApplicationContext(),"Number: "+ toNum + "  #  Text: " + smsText,Toast.LENGTH_SHORT).show();
+            try{
+                SmsManager sms = SmsManager.getDefault();
+                sms.sendTextMessage(toNum, null, smsText, null, null);
+            }catch (Exception e){
+                Log.i(TAG, ""+e);
+            }
+            return true;
+        }
+        catch (Exception e)
+        {
+            Toast.makeText(getApplicationContext(),"SMS faild, please try again later!",Toast.LENGTH_SHORT).show();
+            Log.i(TAG, ""+e);
+        }
+       return false;
     }
 }
