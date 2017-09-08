@@ -44,5 +44,9 @@
         android:icon="@drawable/view_off"
         android:title="DontShowSystem"
         pt.lsts.alvii:showAsAction="ifRoom" />
-
+    <item
+        android:id="@+id/action_sendsms"
+        android:icon="@drawable/sms"
+        android:title="Send Sms"
+        pt.lsts.alvii:showAsAction="ifRoom" />
 </menu>

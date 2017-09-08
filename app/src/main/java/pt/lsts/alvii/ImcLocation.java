@@ -4,9 +4,12 @@ import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
+import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -44,6 +47,8 @@ import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ListView;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -106,7 +111,7 @@ public class ImcLocation extends AppCompatActivity implements LocationListener, 
     String TELEOPERATION = "teleoperation-mode";
     boolean firstRequestStopTeleop = true;
 
-    //boolean isToShowAllSystem = false;
+    private String lastNumber = "+351";
     boolean isToShowAllVehicles = false;
     boolean isToShowAllMantas = false;
     boolean isToShowAllCCU = false;
@@ -371,6 +376,10 @@ public class ImcLocation extends AppCompatActivity implements LocationListener, 
                 listView_sys.setVisibility(View.VISIBLE);
                 isToShow = !isToShow;
                 invalidateOptionsMenu();
+                break;
+            case R.id.action_sendsms:
+                //TODO
+                startSendSMS();
                 break;
             default:
                 break;
@@ -1334,13 +1343,94 @@ public class ImcLocation extends AppCompatActivity implements LocationListener, 
         acclBusListenner.sendToSpeak(sysName + ", is in service mode", true);
     }
 
-    public boolean sendSMS(String toNum, String smsText) {
+    private void startSendSMS(){
+        LayoutInflater inflater = ImcLocation.this.getLayoutInflater();
+        final View layout = inflater.inflate(R.layout.dialog_sms, null);
+        final EditText systemNumber = layout.findViewById(R.id.dialogNumber);
+        systemNumber.setText(lastNumber);
+        final RadioGroup radioGroup = layout.findViewById(R.id.radioGroup);
+        AlertDialog.Builder builder1 = new AlertDialog.Builder(context);
+        builder1.setMessage("Sms Command!");
+        builder1.setCancelable(true);
+        builder1.setPositiveButton("Send Sms", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                int selectedId = radioGroup.getCheckedRadioButtonId();
+                //RadioButton radioButton = layout.findViewById(selectedId);
+                //Toast.makeText(ImcLocation.this, radioButton.getText(), Toast.LENGTH_SHORT).show();
+                dialog.cancel();
+                lastNumber = systemNumber.getText().toString();
+                switch (selectedId){
+                    case R.id.radioButtonPos:
+                        sendSMS(systemNumber.getText().toString(), "pos");
+                        break;
+                    case R.id.radioButtonAbort:
+                        sendSMS(systemNumber.getText().toString(), "abort");
+                        break;
+                    case R.id.radioButtonGSMOn:
+                        sendSMS(systemNumber.getText().toString(), "gsm true");
+                        break;
+                    case R.id.radioButtonGSMOff:
+                        sendSMS(systemNumber.getText().toString(), "gsm false");
+                        break;
+                    default:
+                        Toast.makeText(ImcLocation.this, "Sms Cmd: No option selected!!!", Toast.LENGTH_SHORT).show();
+                        break;
+                }
+            }
+        });
+        builder1.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                dialog.cancel();
+            }
+        });
+        builder1.setView(layout);
+        final AlertDialog alert11 = builder1.create();
+        alert11.setOnShowListener(new DialogInterface.OnShowListener() {
+            @Override
+            public void onShow(DialogInterface arg0) {
+                alert11.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(Color.RED);
+                alert11.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(Color.GREEN);
+            }
+        });
+        alert11.show();
+    }
+
+    private boolean sendSMS(String toNum, String smsText) {
         try
         {
             Toast.makeText(getApplicationContext(),"Number: "+ toNum + "  #  Text: " + smsText,Toast.LENGTH_SHORT).show();
+            String SENT = "SMS_SENT";
+            PendingIntent sentPI = PendingIntent.getBroadcast(this, 0, new Intent(SENT), 0);
+            registerReceiver(new BroadcastReceiver()
+            {
+                @Override
+                public void onReceive(Context arg0, Intent arg1)
+                {
+                    int resultCode = getResultCode();
+                    switch (resultCode)
+                    {
+                        case Activity.RESULT_OK:
+                            Toast.makeText(getBaseContext(), "SMS sent successfully",Toast.LENGTH_LONG).show();
+                            break;
+                        case SmsManager.RESULT_ERROR_GENERIC_FAILURE:
+                            Toast.makeText(getBaseContext(), "SMS Fail: Generic failure",Toast.LENGTH_LONG).show();
+                            break;
+                        case SmsManager.RESULT_ERROR_NO_SERVICE:
+                            Toast.makeText(getBaseContext(), "SMS Fail: No service",Toast.LENGTH_LONG).show();
+                            break;
+                        case SmsManager.RESULT_ERROR_NULL_PDU:
+                            Toast.makeText(getBaseContext(), "SMS Fail: Null PDU",Toast.LENGTH_LONG).show();
+                            break;
+                        case SmsManager.RESULT_ERROR_RADIO_OFF:
+                            Toast.makeText(getBaseContext(), "SMS Fail: Radio off",Toast.LENGTH_LONG).show();
+                            break;
+                    }
+                }
+            }, new IntentFilter(SENT));
+
             try{
                 SmsManager sms = SmsManager.getDefault();
-                sms.sendTextMessage(toNum, null, smsText, null, null);
+                sms.sendTextMessage(toNum, null, smsText, sentPI, null);
             }catch (Exception e){
                 Log.i(TAG, ""+e);
             }
