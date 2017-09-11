@@ -35,6 +35,9 @@
     <uses-permission
         android:name="android.permission.SEND_SMS"
         android:required="true" />
+    <uses-permission
+        android:name="android.permission.READ_CONTACTS"
+        android:required="true" />
 
     <application
         android:allowBackup="true"

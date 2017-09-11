@@ -143,6 +143,7 @@ public class AlviiMain extends Activity {
                 Manifest.permission.ACCESS_NETWORK_STATE,
                 Manifest.permission.ACCESS_WIFI_STATE,
                 Manifest.permission.SEND_SMS,
+                Manifest.permission.READ_CONTACTS,
                 //Manifest.permission.CAMERA,
                 Manifest.permission.VIBRATE,
                 Manifest.permission.ACCESS_FINE_LOCATION,

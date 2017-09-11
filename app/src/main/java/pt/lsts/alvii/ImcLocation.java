@@ -174,6 +174,7 @@ public class ImcLocation extends AppCompatActivity implements LocationListener, 
                 Manifest.permission.ACCESS_NETWORK_STATE,
                 Manifest.permission.ACCESS_WIFI_STATE,
                 Manifest.permission.SEND_SMS,
+                Manifest.permission.READ_CONTACTS,
                 //Manifest.permission.CAMERA,
                 Manifest.permission.ACCESS_FINE_LOCATION,
                 Manifest.permission.ACCESS_COARSE_LOCATION,
@@ -1389,7 +1390,7 @@ public class ImcLocation extends AppCompatActivity implements LocationListener, 
             @Override
             public void onShow(DialogInterface arg0) {
                 alert11.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(Color.RED);
-                alert11.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(Color.GREEN);
+                alert11.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(Color.BLUE);
             }
         });
         alert11.show();
