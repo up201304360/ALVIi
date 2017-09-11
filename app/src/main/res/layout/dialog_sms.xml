@@ -86,4 +86,15 @@
             app:layout_constraintLeft_toLeftOf="parent" />
     </RadioGroup>
 
+    <ImageButton
+        android:id="@+id/imageButtonContact"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginRight="24dp"
+        android:layout_marginTop="24dp"
+        android:elevation="24dp"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/dialogNumber"
+        app:srcCompat="@drawable/ic_contacts" />
+
 </android.support.constraint.ConstraintLayout>

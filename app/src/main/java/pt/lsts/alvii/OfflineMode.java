@@ -3,18 +3,23 @@ package pt.lsts.alvii;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.PendingIntent;
+import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.database.Cursor;
 import android.graphics.Color;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.net.Uri;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.os.Handler;
+import android.provider.ContactsContract;
 import android.speech.tts.TextToSpeech;
 import android.support.v7.app.AppCompatActivity;
 import android.telephony.SmsManager;
@@ -28,13 +33,17 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.util.ArrayList;
 import java.util.Locale;
 
 /**
@@ -72,6 +81,14 @@ public class OfflineMode extends AppCompatActivity {
     int cntSpeakId = 0;
     MenuInflater inflater;
     private String lastNumber = "+351";
+    private ListView mListView;
+    private ProgressDialog pDialog;
+    private Handler updateBarHandler;
+    ArrayList<String> contactList;
+    Cursor cursor;
+    int counter;
+    AlertDialog alertContact;
+    EditText systemNumber;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -337,11 +354,65 @@ public class OfflineMode extends AppCompatActivity {
         return true;
     }
 
+    private void startLoadContact(){
+        pDialog = new ProgressDialog(this);
+        pDialog.setMessage("Reading contacts...");
+        pDialog.setCancelable(false);
+        pDialog.show();
+
+        LayoutInflater inflater = OfflineMode.this.getLayoutInflater();
+        final View layout = inflater.inflate(R.layout.activity_contacts, null);
+
+        final AlertDialog.Builder builder1 = new AlertDialog.Builder(context);
+        builder1.setMessage("Contacts");
+        builder1.setCancelable(true);
+        builder1.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                dialog.cancel();
+            }
+        });
+        builder1.setView(layout);
+
+        mListView = (ListView) layout.findViewById(R.id.listcontacts);
+        updateBarHandler =new Handler();
+        // Since reading contacts takes more time, let's run it on a separate thread.
+        new Thread(new Runnable() {
+
+            @Override
+            public void run() {
+                getContacts();
+            }
+        }).start();
+        // Set onclicklistener to the list item.
+        mListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                String textStr[] = contactList.get(position).split("\\r\\n|\\n|\\r");
+                String number = textStr[2].replace("-", "");
+                if(number.contains("+"))
+                    systemNumber.setText(number);
+                else
+                    systemNumber.setText("+351"+number);
+
+                alertContact.dismiss();
+            }
+        });
+
+        alertContact = builder1.create();
+    }
+
     private void startSendSMS(){
         LayoutInflater inflater = OfflineMode.this.getLayoutInflater();
         final View layout = inflater.inflate(R.layout.dialog_sms, null);
-        final EditText systemNumber = layout.findViewById(R.id.dialogNumber);
+        systemNumber = layout.findViewById(R.id.dialogNumber);
         systemNumber.setText(lastNumber);
+        final ImageButton buttonContact = (ImageButton) layout.findViewById(R.id.imageButtonContact);
+        buttonContact.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View arg0) {
+                startLoadContact();
+            }
+        });
         final RadioGroup radioGroup = layout.findViewById(R.id.radioGroup);
         AlertDialog.Builder builder1 = new AlertDialog.Builder(context);
         builder1.setMessage("Sms Command!");
@@ -436,5 +507,66 @@ public class OfflineMode extends AppCompatActivity {
             Log.i(TAG, ""+e);
         }
         return false;
+    }
+
+    public void getContacts() {
+        contactList = new ArrayList<String>();
+        String phoneNumber = null;;
+        Uri CONTENT_URI = ContactsContract.Contacts.CONTENT_URI;
+        String _ID = ContactsContract.Contacts._ID;
+        String DISPLAY_NAME = ContactsContract.Contacts.DISPLAY_NAME;
+        String HAS_PHONE_NUMBER = ContactsContract.Contacts.HAS_PHONE_NUMBER;
+        Uri PhoneCONTENT_URI = ContactsContract.CommonDataKinds.Phone.CONTENT_URI;
+        String Phone_CONTACT_ID = ContactsContract.CommonDataKinds.Phone.CONTACT_ID;
+        String NUMBER = ContactsContract.CommonDataKinds.Phone.NUMBER;
+        StringBuffer output;
+        ContentResolver contentResolver = getContentResolver();
+        cursor = contentResolver.query(CONTENT_URI, null, null, null, null);
+        // Iterate every contact in the phone
+        if (cursor.getCount() > 0) {
+            counter = 0;
+            while (cursor.moveToNext()) {
+                output = new StringBuffer();
+                // Update the progress message
+                updateBarHandler.post(new Runnable() {
+                    public void run() {
+                        pDialog.setMessage("Reading contacts : " + counter++ + "/" + cursor.getCount());
+                    }
+                });
+                String contact_id = cursor.getString(cursor.getColumnIndex(_ID));
+                String name = cursor.getString(cursor.getColumnIndex(DISPLAY_NAME));
+                int hasPhoneNumber = Integer.parseInt(cursor.getString(cursor.getColumnIndex(HAS_PHONE_NUMBER)));
+                if (hasPhoneNumber > 0) {
+                    output.append("\n" + name);
+                    //This is to read multiple phone numbers associated with the same contact
+                    Cursor phoneCursor = contentResolver.query(PhoneCONTENT_URI, null, Phone_CONTACT_ID + " = ?", new String[]{contact_id}, null);
+                    while (phoneCursor.moveToNext()) {
+                        phoneNumber = phoneCursor.getString(phoneCursor.getColumnIndex(NUMBER));
+                        output.append("\n" + phoneNumber);
+                    }
+                    phoneCursor.close();
+                    // Add the contact to the ArrayList
+                    contactList.add(output.toString());
+                }
+            }
+            // ListView has to be updated using a ui thread
+            runOnUiThread(new Runnable() {
+
+                @Override
+                public void run() {
+                    ArrayAdapter<String> adapter = new ArrayAdapter<String>(getApplicationContext(), R.layout.list_item, R.id.text1, contactList);
+                    mListView.setAdapter(adapter);
+                    alertContact.show();
+                }
+            });
+            // Dismiss the progressbar after 500 millisecondds
+            updateBarHandler.postDelayed(new Runnable() {
+
+                @Override
+                public void run() {
+                    pDialog.cancel();
+                }
+            }, 500);
+        }
     }
 }
