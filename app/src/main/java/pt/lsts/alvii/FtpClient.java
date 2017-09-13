@@ -78,6 +78,10 @@ public class FtpClient extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        if(!(Thread.getDefaultUncaughtExceptionHandler() instanceof CustomExceptionHandler)) {
+            Thread.setDefaultUncaughtExceptionHandler(new CustomExceptionHandler(
+                    storageDir.toString(), ""));
+        }
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_ftp);
 

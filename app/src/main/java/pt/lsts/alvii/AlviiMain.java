@@ -73,6 +73,10 @@ public class AlviiMain extends Activity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        if(!(Thread.getDefaultUncaughtExceptionHandler() instanceof CustomExceptionHandler)) {
+            Thread.setDefaultUncaughtExceptionHandler(new CustomExceptionHandler(
+                    storageDir.toString(), ""));
+        }
         mainActivity = this;
         super.onCreate(savedInstanceState);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);

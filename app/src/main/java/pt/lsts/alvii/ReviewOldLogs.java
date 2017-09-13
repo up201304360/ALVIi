@@ -46,6 +46,7 @@ public class ReviewOldLogs extends AppCompatActivity {
     private TextView exifTex;
     private ImageView img;
     boolean firstBack = true;
+    private File storageDir = new File(Environment.getExternalStorageDirectory().getPath() + File.separator + "alvii");
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -71,6 +72,10 @@ public class ReviewOldLogs extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        if(!(Thread.getDefaultUncaughtExceptionHandler() instanceof CustomExceptionHandler)) {
+            Thread.setDefaultUncaughtExceptionHandler(new CustomExceptionHandler(
+                    storageDir.toString(), ""));
+        }
         super.onCreate(savedInstanceState);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         setContentView(R.layout.activity_review_old_logs);

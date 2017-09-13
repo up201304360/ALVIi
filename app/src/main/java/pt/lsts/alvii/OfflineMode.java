@@ -18,6 +18,7 @@ import android.net.Uri;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.provider.ContactsContract;
 import android.speech.tts.TextToSpeech;
@@ -43,6 +44,7 @@ import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Locale;
 
@@ -89,9 +91,14 @@ public class OfflineMode extends AppCompatActivity {
     int counter;
     AlertDialog alertContact;
     EditText systemNumber;
+    private File storageDir = new File(Environment.getExternalStorageDirectory().getPath() + File.separator + "alvii");
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        if(!(Thread.getDefaultUncaughtExceptionHandler() instanceof CustomExceptionHandler)) {
+            Thread.setDefaultUncaughtExceptionHandler(new CustomExceptionHandler(
+                    storageDir.toString(), ""));
+        }
         cntSpeak = 0;
         cntSpeakId = 0;
         isSpeakWifiStateOn = true;

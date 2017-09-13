@@ -450,7 +450,7 @@ public class ImcLocation extends AppCompatActivity implements LocationListener, 
     protected void onCreate(Bundle savedInstanceState) {
         if(!(Thread.getDefaultUncaughtExceptionHandler() instanceof CustomExceptionHandler)) {
             Thread.setDefaultUncaughtExceptionHandler(new CustomExceptionHandler(
-                    storageDir.toString(), "pedro@lsts.pt"));
+                    storageDir.toString(), ""));
         }
         try {
             AlviiMain.mainActivity.finish();
@@ -1471,7 +1471,6 @@ public class ImcLocation extends AppCompatActivity implements LocationListener, 
     }
 
     private void startLoadContact(){
-        int x = 1/0;
         pDialog = new ProgressDialog(this);
         pDialog.setMessage("Reading contacts...");
         pDialog.setCancelable(false);
