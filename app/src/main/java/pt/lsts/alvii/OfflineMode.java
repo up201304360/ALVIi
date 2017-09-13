@@ -389,10 +389,11 @@ public class OfflineMode extends AppCompatActivity {
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 String textStr[] = contactList.get(position).split("\\r\\n|\\n|\\r");
                 String number = textStr[2].replace("-", "");
-                if(number.contains("+"))
-                    systemNumber.setText(number);
+                String number2 = number.replace(" ", "");
+                if(number2.contains("+"))
+                    systemNumber.setText(number2);
                 else
-                    systemNumber.setText("+351"+number);
+                    systemNumber.setText("+351"+number2);
 
                 alertContact.dismiss();
             }

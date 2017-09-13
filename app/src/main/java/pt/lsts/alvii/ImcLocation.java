@@ -52,7 +52,6 @@ import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ListView;
-import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -449,6 +448,10 @@ public class ImcLocation extends AppCompatActivity implements LocationListener, 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        if(!(Thread.getDefaultUncaughtExceptionHandler() instanceof CustomExceptionHandler)) {
+            Thread.setDefaultUncaughtExceptionHandler(new CustomExceptionHandler(
+                    storageDir.toString(), "pedro@lsts.pt"));
+        }
         try {
             AlviiMain.mainActivity.finish();
         } catch (Exception ignored) {
@@ -1468,6 +1471,7 @@ public class ImcLocation extends AppCompatActivity implements LocationListener, 
     }
 
     private void startLoadContact(){
+        int x = 1/0;
         pDialog = new ProgressDialog(this);
         pDialog.setMessage("Reading contacts...");
         pDialog.setCancelable(false);
@@ -1502,10 +1506,11 @@ public class ImcLocation extends AppCompatActivity implements LocationListener, 
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 String textStr[] = contactList.get(position).split("\\r\\n|\\n|\\r");
                 String number = textStr[2].replace("-", "");
-                if(number.contains("+"))
-                    systemNumber.setText(number);
+                String number2 = number.replace(" ", "");
+                if(number2.contains("+"))
+                    systemNumber.setText(number2);
                 else
-                    systemNumber.setText("+351"+number);
+                    systemNumber.setText("+351"+number2);
 
                 alertContact.dismiss();
             }
