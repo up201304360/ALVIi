@@ -46,7 +46,7 @@ public class ReviewOldLogs extends AppCompatActivity {
     private TextView exifTex;
     private ImageView img;
     boolean firstBack = true;
-    private File storageDir = new File(Environment.getExternalStorageDirectory().getPath() + File.separator + "alvii");
+    private File storageDir = new File(path);
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -110,10 +110,14 @@ public class ReviewOldLogs extends AppCompatActivity {
     private void showFile(String filePath, String fileName) {
         String extension = fileName.substring(fileName.lastIndexOf("."));
         //Log.i(TAG, extension);
-        if (extension.equals(".txt") || extension.equals(".ini"))
+        if (extension.equals(".txt") || extension.equals(".ini") || extension.equals(".stacktrace"))
             showTextFile(filePath, fileName);
-        else
+        else if(extension.equals(".gz") || extension.equals(".lsf"))
+            mraLite(filePath, fileName);
+        else if(extension.equals(".jpg") || extension.equals(".jpeg") || extension.equals(".bmp") || extension.equals(".png"))
             showImage(filePath, fileName);
+        else
+            Toast.makeText(this, "File not supported", Toast.LENGTH_SHORT).show();
     }
 
     private void showTextFile(String filePath, String fileName) {
@@ -203,5 +207,16 @@ public class ReviewOldLogs extends AppCompatActivity {
     public void exitApp() {
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         this.finish();
+    }
+
+    private void mraLite(String filePath, String fileName) {
+        Log.i(TAG, filePath);
+        Log.i(TAG, fileName);
+        Intent intent = new Intent(ReviewOldLogs.this, MRALite.class);
+        Bundle b = new Bundle();
+        b.putString("BUNDLE_PATH", filePath);
+        b.putString("BUNDLE_FILENAME", fileName);
+        intent.putExtras(b);
+        startActivity(intent);
     }
 }

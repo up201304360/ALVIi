@@ -16,16 +16,9 @@ import java.util.Calendar;
 public class CustomExceptionHandler implements Thread.UncaughtExceptionHandler {
 
     private Thread.UncaughtExceptionHandler defaultUEH;
-
     private String localPath;
-
     private String url;
 
-    private Context context = ImcLocation.fa_ImcLocation;
-    /*
-     * if any of the parameters is null, the respective functionality
-     * will not be used
-     */
     public CustomExceptionHandler(String localPath, String url) {
         this.localPath = localPath;
         this.url = url;
@@ -49,8 +42,7 @@ public class CustomExceptionHandler implements Thread.UncaughtExceptionHandler {
 
     private void writeToFile(String stacktrace, String filename) {
         try {
-            BufferedWriter bos = new BufferedWriter(new FileWriter(
-                    localPath + "/" + filename));
+            BufferedWriter bos = new BufferedWriter(new FileWriter(localPath + "/" + filename));
             bos.write(stacktrace);
             bos.flush();
             bos.close();

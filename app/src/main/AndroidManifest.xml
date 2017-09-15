@@ -80,10 +80,15 @@
             android:label="ALVIi - Offline Mode"
             android:screenOrientation="portrait" />
         <activity
+            android:name=".MRALite"
+            android:label="ALVIi - MRA Lite"
+            android:screenOrientation="portrait" />
+        <activity
             android:name=".FileChooser"
-            android:screenOrientation="portrait"
-            android:label="Choose File" >
+            android:label="Choose File"
+            android:screenOrientation="portrait">
             <action android:name="pt.lsts.alvii.FileChooser" />
+
             <category android:name="android.intent.category.DEFAULT" />
         </activity>
     </application>
