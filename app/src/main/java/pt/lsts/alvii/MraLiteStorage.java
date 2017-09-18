@@ -20,36 +20,48 @@ class MraLiteStorage {
     private static final String TAG = "MEU MraLiteStorage";
     private LsfIndex m_index;
     private Context m_context;
-    String messageList[] = new String[256];
-    private String messageListPart[][] = new String[4][256];
-    int cntMsgByTheard[] = new int[4];
+    private int numberThread = 4;
+    String messageList[] = new String[512];
+    private String messageListPart[][] = new String[numberThread][512];
+    int cntMsgByTheard[] = new int[numberThread];
     private int numberOfMessage = 0;
     private int split;
-    private int cntThread[] = new int[4];
-    private boolean isThreadFinish[] = new boolean[4];
+    private int cntThread[] = new int[numberThread];
+    private boolean isThreadFinish[] = new boolean[numberThread];
+    private int cntListLog = 0;
 
     public MraLiteStorage(Context context) {
         m_context = context;
-        for(int i = 0; i < 4; i++){
+        for(int i = 0; i < numberThread; i++){
             cntThread[i] = 0;
             cntMsgByTheard[i] = 0;
             isThreadFinish[i] = false;
         }
     }
 
-    public void addMsg(IMCMessage message) {
-    }
-
     public long getProcessStageValue(){
-        return (cntThread[0] + cntThread[1] + cntThread[2] + cntThread[3]) + 1;
+        long result = 0;
+        for(int i = 0; i < numberThread; i++)
+            result = result + cntThread[i];
+
+        return result + 1;
     }
 
     public int getNumberMessages(){
         return numberOfMessage;
     }
 
+    public int getNumberOfListMsg() { return cntListLog; }
+
     public boolean isAllThreadFinish(){
-        if(isThreadFinish[0] && isThreadFinish[1] && isThreadFinish[2] && isThreadFinish[3])
+
+        boolean noRun = true;
+        for(int t = 0; t < numberThread; t ++){
+            if(!isThreadFinish[t])
+                noRun = false;
+        }
+
+        if(noRun)
             return true;
         else
             return false;
@@ -62,38 +74,40 @@ class MraLiteStorage {
     public void indexListOfMessage(LsfIndex index) {
         m_index = index;
         numberOfMessage = m_index.getNumberOfMessages();
-        split = (numberOfMessage / 4);
+        split = (numberOfMessage / numberThread);
         // Since reading log takes more time, let's run it on a separate threads.
-        new Thread(new Runnable() {
+        Thread thread1 = new Thread(new Runnable() {
             @Override
             public void run() {
-                getPartOfListMessage(1, split, 1);
+                getPartOfListMessage(1, split, 1, m_index);
             }
-        }).start();
-        new Thread(new Runnable() {
+        });
+        Thread thread2 = new Thread(new Runnable() {
             @Override
             public void run() {
-                getPartOfListMessage(split + 1, split * 2, 2);
+                getPartOfListMessage(split + 1, split * 2, 2,m_index);
             }
-        }).start();
-        new Thread(new Runnable() {
+        });
+        Thread thread3 = new Thread(new Runnable() {
             @Override
             public void run() {
-                getPartOfListMessage(split * 2 + 1, split * 3, 3);
+                getPartOfListMessage(split * 2 + 1, split * 3, 3, m_index);
             }
-        }).start();
-        new Thread(new Runnable() {
+        });
+        Thread thread4 = new Thread(new Runnable() {
             @Override
             public void run() {
-                getPartOfListMessage(split * 3 + 1, numberOfMessage - 1, 4);
+                getPartOfListMessage(split * 3 + 1, numberOfMessage - 1, 4, m_index);
             }
-        }).start();
+        });
 
-        //isThreadFinish[2] = true;
-        //isThreadFinish[3] = true;
+        thread1.start();
+        thread2.start();
+        thread3.start();
+        thread4.start();
     }
 
-    private void getPartOfListMessage(int startCnt, int ends, int idThread){
+    private void getPartOfListMessage(int startCnt, int ends, int idThread, LsfIndex t_index){
         int state_msg;
         cntThread[idThread - 1] = 0;
         isThreadFinish[idThread - 1] = false;
@@ -101,7 +115,7 @@ class MraLiteStorage {
         String msgName;
         for(state_msg = startCnt; state_msg <= ends; state_msg++){
             haveName = false;
-            msgName = m_index.getMessage(state_msg).getAbbrev();
+            msgName = t_index.getMessage(state_msg).getAbbrev();
             if(cntMsgByTheard[idThread - 1] == 0){
                 messageListPart[idThread - 1][cntMsgByTheard[idThread - 1]] = msgName;
                 cntMsgByTheard[idThread - 1]++;
@@ -119,71 +133,50 @@ class MraLiteStorage {
             }
             cntThread[idThread - 1]++;
         }
-        Log.i(TAG, "Finish "+ idThread + " - "+ cntThread[idThread - 1] + "  cnt: " + cntMsgByTheard[idThread - 1]);
+        //Log.i(TAG, "Finish "+ idThread + " - "+ cntThread[idThread - 1] + "  cnt: " + cntMsgByTheard[idThread - 1]);
         isThreadFinish[idThread - 1] = true;
-        if(isThreadFinish[0] && isThreadFinish[1] && isThreadFinish[2] && isThreadFinish[3])
+
+        boolean noRun = true;
+        for(int t = 0; t < numberThread; t ++){
+            if(!isThreadFinish[t])
+                noRun = false;
+        }
+        if(noRun)
             mergeListMessagePart();
     }
 
     private void mergeListMessagePart() {
-        //TODO
-        /*for(int i = 0; i < cntMsgByTheard[0]; i++)
-            Log.i(TAG, messageListPart[0][i]);*/
-
-        //messageList = Arrays.copyOf(messageListPart[0], cntMsgByTheard[0]);
-
         for(int i = 0; i < cntMsgByTheard[0]; i++)
             messageList[i] = messageListPart[0][i];
 
         int size = cntMsgByTheard[0];
         boolean haveImcMessage;
 
-        try {
-
-            for (int i = 0; i < cntMsgByTheard[1]; i++) {
-                Log.i(TAG, "AQUI 1: "+i+" - "+cntMsgByTheard[1] + " S: "+size);
-                haveImcMessage = false;
-                for (int t = 0; t < size; t++) {
-                    if (messageList[t].equals(messageListPart[1][i]))
-                        haveImcMessage = true;
-                }
-                if (!haveImcMessage) {
-                    size++;
-                    messageList[size] = messageListPart[1][i];
-                }
-            }
-
-            for (int i = 0; i < cntMsgByTheard[2]; i++) {
-                Log.i(TAG, "AQUI 2: "+i+" - "+cntMsgByTheard[2] + " S: "+size);
-                haveImcMessage = false;
-                for (int t = 0; t < size; t++) {
-                    if (messageList[t].equals(messageListPart[2][i]))
-                        haveImcMessage = true;
-                }
-                if (!haveImcMessage) {
-                    size++;
-                    messageList[size] = messageListPart[2][i];
+        for(int r = 1; r < numberThread; r++){
+            try {
+                for (int i = 0; i < cntMsgByTheard[r]; i++) {
+                    //Log.i(TAG, "AQUI "+r+":"+i+" - "+cntMsgByTheard[r] + " S: "+size);
+                    haveImcMessage = false;
+                    for (int t = 0; t < size; t++) {
+                        if (messageList[t].equals(messageListPart[r][i]))
+                            haveImcMessage = true;
+                    }
+                    if (!haveImcMessage) {
+                        messageList[size++] = messageListPart[r][i];
+                    }
                 }
             }
-
-            for (int i = 0; i < cntMsgByTheard[3]; i++) {
-                Log.i(TAG, "AQUI 3: "+i+" - "+cntMsgByTheard[3] + " S: "+size);
-                haveImcMessage = false;
-                for (int t = 0; t < size; t++) {
-                    if (messageList[t].equals(messageListPart[3][i]))
-                        haveImcMessage = true;
-                }
-                if (!haveImcMessage) {
-                    size++;
-                    messageList[size] = messageListPart[3][i];
-
-                }
+            catch (Exception io){
+                Log.i(TAG, "ERROR: "+io);
             }
-        }catch (Exception io){
-            Log.i(TAG, "ERROR: ",io);
         }
 
-        Log.i(TAG, "SIZE FINAL: "+size);
+        size--;
+        //Log.i(TAG, "SIZE FINAL: "+size);
+        cntListLog = size;
+        /*for(int i = 0; i < size ; i++){
+            Log.i(TAG, messageList[i]);
+        }*/
     }
 
             /*double endTime = index.getEndTime();

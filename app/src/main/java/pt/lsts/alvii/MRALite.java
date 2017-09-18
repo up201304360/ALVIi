@@ -9,6 +9,8 @@ import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.WindowManager;
+import android.widget.ArrayAdapter;
+import android.widget.ListView;
 
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
@@ -19,6 +21,7 @@ import java.io.FileInputStream;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Arrays;
 
 import pt.lsts.imc.Current;
 import pt.lsts.imc.EntityState;
@@ -54,6 +57,7 @@ public class MRALite extends AppCompatActivity {
             if(checkIndex) {
                 if (m_mra_storage.isAllThreadFinish()){
                     Log.i(TAG, "Reading Log - Msg " + m_mra_storage.getProcessStageValue() + " of " + m_mra_storage.getNumberMessages());
+                    Log.i(TAG, "number of messages: " + m_mra_storage.getNumberOfListMsg());
                     updateBarHandler.postDelayed(new Runnable() {
 
                         @Override
@@ -61,8 +65,8 @@ public class MRALite extends AppCompatActivity {
                             pDialog.cancel();
                         }
                     }, 0);
-                    //String listMessage[] = m_mra_storage.getListOfMessages();
                     checkIndex = false;
+                    diplayList();
                 }
                 updateBarHandler.post(new Runnable() {
                     public void run() {
@@ -308,7 +312,7 @@ public class MRALite extends AppCompatActivity {
         try {
             index = new LsfIndex(source, IMCDefinition.getInstance());
         } catch (Exception e) {
-            Log.i(TAG, "AQUI 1: ", e);
+            Log.i(TAG, ""+e);
             updateBarHandler.postDelayed(new Runnable() {
 
                 @Override
@@ -320,6 +324,14 @@ public class MRALite extends AppCompatActivity {
 
         m_mra_storage.indexListOfMessage(index);
         checkIndex = true;
-        Log.i(TAG, "number of messages: " + m_mra_storage.getNumberMessages());
+    }
+
+    private void diplayList() {
+        String[] listMessage = Arrays.copyOf(m_mra_storage.getListOfMessages(), m_mra_storage.getNumberOfListMsg());
+        ListView listView = (ListView) findViewById(R.id.msg_list);
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
+                android.R.layout.simple_list_item_1, android.R.id.text1, listMessage);
+        // Assign adapter to ListView
+        listView.setAdapter(adapter);
     }
 }
