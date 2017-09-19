@@ -320,7 +320,7 @@ public class MRALite extends AppCompatActivity {
         }
 
         try {
-            Log.i(TAG, "Indexing log");
+            //Log.i(TAG, "Indexing log");
             openLogSource(f);
             return true;
         }

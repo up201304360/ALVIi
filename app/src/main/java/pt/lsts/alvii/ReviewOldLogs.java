@@ -210,8 +210,6 @@ public class ReviewOldLogs extends AppCompatActivity {
     }
 
     private void mraLite(String filePath, String fileName) {
-        Log.i(TAG, filePath);
-        Log.i(TAG, fileName);
         Intent intent = new Intent(ReviewOldLogs.this, MRALite.class);
         Bundle b = new Bundle();
         b.putString("BUNDLE_PATH", filePath);
