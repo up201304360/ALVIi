@@ -119,6 +119,10 @@ public class MRALite extends AppCompatActivity {
                             updateBarHandler.removeCallbacksAndMessages(null);
                             pDialog.cancel();
                             m_mra_storage.getListMessgeByOldIndex(logLsf);
+                            Log.i(TAG, "Reading Log - Msg " + m_mra_storage.getProcessStageValue() + " of " + m_mra_storage.getNumberMessages());
+                            Log.i(TAG, "number of messages: " + m_mra_storage.getNumberOfListMsg());
+                            checkIndex = false;
+                            diplayList();
                         }
                     });
             AlertDialog alertDialog = alertDialogBuilder.create();

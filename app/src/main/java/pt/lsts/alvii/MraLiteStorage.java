@@ -3,9 +3,13 @@ package pt.lsts.alvii;
 import android.content.Context;
 import android.util.Log;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStreamReader;
 
 import pt.lsts.imc.lsf.LsfIndex;
 
@@ -189,7 +193,7 @@ class MraLiteStorage {
         FileWriter writer = null;
         try {
             writer = new FileWriter(gpxfile);
-            for (int i = 0; i < size; i++)
+            for (int i = 0; i < cntListLog; i++)
                 writer.append(messageList[i]+"\n");
             writer.flush();
             writer.close();
@@ -204,6 +208,32 @@ class MraLiteStorage {
             isThreadFinish[i] = true;
         }
         Log.i(TAG, "EXIST: "+source.getParent().toString());
+        int cnt = 0;
+        File gpxfile = new File(source.getParent(), "indexMessageList.stackIndex");
+        FileInputStream is = null;
+        try {
+            is = new FileInputStream(gpxfile);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+        BufferedReader reader = new BufferedReader(new InputStreamReader(is));
+        String line = null;
+        try {
+            line = reader.readLine();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        while(line != null){
+            messageList[cnt] = line;
+            cnt++;
+            Log.i(TAG, line);
+            try {
+                line = reader.readLine();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        cntListLog = cnt;
     }
 
             /*double endTime = index.getEndTime();
