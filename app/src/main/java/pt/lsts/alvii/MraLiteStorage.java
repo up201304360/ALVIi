@@ -1,13 +1,12 @@
 package pt.lsts.alvii;
 
-import android.app.ProgressDialog;
 import android.content.Context;
-import android.os.Handler;
 import android.util.Log;
 
-import java.util.Arrays;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 
-import pt.lsts.imc.IMCMessage;
 import pt.lsts.imc.lsf.LsfIndex;
 
 /**
@@ -29,9 +28,18 @@ class MraLiteStorage {
     private int cntThread[] = new int[numberThread];
     private boolean isThreadFinish[] = new boolean[numberThread];
     private int cntListLog = 0;
+    private File m_file_path;
 
     public MraLiteStorage(Context context) {
         m_context = context;
+        for(int i = 0; i < numberThread; i++){
+            cntThread[i] = 0;
+            cntMsgByTheard[i] = 0;
+            isThreadFinish[i] = false;
+        }
+    }
+
+    public void initMraLiteStorage(){
         for(int i = 0; i < numberThread; i++){
             cntThread[i] = 0;
             cntMsgByTheard[i] = 0;
@@ -54,7 +62,6 @@ class MraLiteStorage {
     public int getNumberOfListMsg() { return cntListLog; }
 
     public boolean isAllThreadFinish(){
-
         boolean noRun = true;
         for(int t = 0; t < numberThread; t ++){
             if(!isThreadFinish[t])
@@ -71,7 +78,7 @@ class MraLiteStorage {
         return messageList;
     }
 
-    public void indexListOfMessage(LsfIndex index) {
+    public void indexListOfMessage(LsfIndex index, File path) {
         m_index = index;
         numberOfMessage = m_index.getNumberOfMessages();
         split = (numberOfMessage / numberThread);
@@ -105,6 +112,8 @@ class MraLiteStorage {
         thread2.start();
         thread3.start();
         thread4.start();
+
+        m_file_path = path;
     }
 
     private void getPartOfListMessage(int startCnt, int ends, int idThread, LsfIndex t_index){
@@ -170,13 +179,31 @@ class MraLiteStorage {
                 Log.i(TAG, "ERROR: "+io);
             }
         }
-
         size--;
-        //Log.i(TAG, "SIZE FINAL: "+size);
         cntListLog = size;
-        /*for(int i = 0; i < size ; i++){
-            Log.i(TAG, messageList[i]);
-        }*/
+        File root = new File(m_file_path.getParent());
+        if (!root.exists()) {
+            root.mkdirs();
+        }
+        File gpxfile = new File(root, "indexMessageList.stackIndex");
+        FileWriter writer = null;
+        try {
+            writer = new FileWriter(gpxfile);
+            for (int i = 0; i < size; i++)
+                writer.append(messageList[i]+"\n");
+            writer.flush();
+            writer.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void getListMessgeByOldIndex(File source){
+        isThreadFinish[0] = false;
+        for(int i = 1; i < numberThread; i++){
+            isThreadFinish[i] = true;
+        }
+        Log.i(TAG, "EXIST: "+source.getParent().toString());
     }
 
             /*double endTime = index.getEndTime();

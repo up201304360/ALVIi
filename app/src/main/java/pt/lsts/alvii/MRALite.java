@@ -1,8 +1,9 @@
 package pt.lsts.alvii;
 
+import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.Context;
-import android.content.Intent;
+import android.content.DialogInterface;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -18,23 +19,18 @@ import org.apache.commons.io.FileUtils;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
 
-import pt.lsts.imc.Current;
-import pt.lsts.imc.EntityState;
 import pt.lsts.imc.IMCDefinition;
 import pt.lsts.imc.lsf.LsfIndex;
-import pt.lsts.imc.lsf.LsfIndexListener;
 
 public class MRALite extends AppCompatActivity {
 
     private static final String TAG = "MEU MRALite";
     private File storageDir = new File(Environment.getExternalStorageDirectory().getPath() + File.separator + "alvii");
     final Context context = this;
-    int cnt;
     int state_msg = 0;
 
     /** LSF (LSTS Serialized Format) file extension */
@@ -50,30 +46,28 @@ public class MRALite extends AppCompatActivity {
     private Handler customHandler;
     boolean checkIndex = false;
     MraLiteStorage m_mra_storage = new MraLiteStorage(context);
+    private boolean alreadyConverted;
 
     //Run task periodically
     private Runnable updateTimerThread = new Runnable() {
         public void run() {
             if(checkIndex) {
-                if (m_mra_storage.isAllThreadFinish()){
+                if (m_mra_storage.isAllThreadFinish()) {
                     Log.i(TAG, "Reading Log - Msg " + m_mra_storage.getProcessStageValue() + " of " + m_mra_storage.getNumberMessages());
                     Log.i(TAG, "number of messages: " + m_mra_storage.getNumberOfListMsg());
-                    updateBarHandler.postDelayed(new Runnable() {
-
-                        @Override
-                        public void run() {
-                            pDialog.cancel();
-                        }
-                    }, 0);
+                    updateBarHandler.removeCallbacksAndMessages(null);
+                    pDialog.cancel();
                     checkIndex = false;
                     diplayList();
                 }
-                updateBarHandler.post(new Runnable() {
-                    public void run() {
-                        if(state_msg >= 0)
-                            pDialog.setMessage("Reading Log - Msg " + m_mra_storage.getProcessStageValue() + " of " + m_mra_storage.getNumberMessages());
-                    }
-                });
+                else {
+                    updateBarHandler.post(new Runnable() {
+                        public void run() {
+                            if (state_msg >= 0)
+                                pDialog.setMessage("Reading Log - Msg " + m_mra_storage.getProcessStageValue() + " of " + m_mra_storage.getNumberMessages());
+                        }
+                    });
+                }
             }
             customHandler.postDelayed(this, 1000);
         }
@@ -89,28 +83,63 @@ public class MRALite extends AppCompatActivity {
         }
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         Bundle b = getIntent().getExtras();
-        //String m_name = getIntent().getStringExtra("EXTRA_LOCATION_NAME");
         final String path = b.getString("BUNDLE_PATH");
         final String file_name = b.getString("BUNDLE_FILENAME");
-        //Log.i(TAG, path);
-        //Log.i(TAG, file_name);
-
         customHandler = new android.os.Handler();
-        customHandler.postDelayed(updateTimerThread,0);
 
         pDialog = new ProgressDialog(this);
         pDialog.setMessage("Reading Log...");
         pDialog.setCancelable(false);
         pDialog.show();
         updateBarHandler =new Handler();
+        final File logLsf = new File(path + File.separator + file_name);
+
+        File file = new File(logLsf.getParent(), "indexMessageList.stackIndex");
+        if(file.exists()) {
+            AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(context);
+            alertDialogBuilder.setTitle("Log Index");
+            alertDialogBuilder
+                    .setMessage("Log already Index!\nIndex again?")
+                    .setCancelable(false)
+                    .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int id) {
+                            try {
+                                FileUtils.forceDelete(new File(logLsf.getParent(), "indexMessageList.stackIndex"));
+                            } catch (Exception e) {
+                                Log.i(TAG, "Error while trying to delete mra/ folder", e);
+                            }
+                            startIndex(logLsf);
+                            customHandler.postDelayed(updateTimerThread,2000);
+                            checkIndex = true;
+                        }
+                    })
+                    .setNegativeButton("No", new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int id) {
+                            dialog.cancel();
+                            updateBarHandler.removeCallbacksAndMessages(null);
+                            pDialog.cancel();
+                            m_mra_storage.getListMessgeByOldIndex(logLsf);
+                        }
+                    });
+            AlertDialog alertDialog = alertDialogBuilder.create();
+            alertDialog.show();
+        }
+        else{
+            customHandler.postDelayed(updateTimerThread,2000);
+            checkIndex = true;
+            startIndex(logLsf);
+        }
+    }
+
+    private void startIndex(final File logLsf){
         // Since reading log takes more time, let's run it on a separate thread.
         new Thread(new Runnable() {
-
             @Override
             public void run() {
-                openLog(new File(path + File.separator + file_name));
+                openLog(logLsf);
             }
         }).start();
+        //openLog(logLsf);
     }
 
     /**
@@ -273,7 +302,7 @@ public class MRALite extends AppCompatActivity {
         });
 
         final File lsfDir = f.getParentFile();
-        boolean alreadyConverted = false;
+        alreadyConverted = false;
         if (lsfDir.isDirectory()) {
             if (new File(lsfDir, "mra/lsf.index").canRead())
                 alreadyConverted = true;
@@ -291,7 +320,7 @@ public class MRALite extends AppCompatActivity {
         }
 
         try {
-            Log.i(TAG, "Open log");
+            Log.i(TAG, "Indexing log");
             openLogSource(f);
             return true;
         }
@@ -301,28 +330,27 @@ public class MRALite extends AppCompatActivity {
         }
     }
 
-    private void openLogSource(File source) {
+    private void openLogSource(final File source) {
+        m_mra_storage.initMraLiteStorage();
         updateBarHandler.post(new Runnable() {
             public void run() {
                 pDialog.setMessage("Indexing Log...");
             }
         });
-        Log.i(TAG, ""+source.toString());
+        //Log.i(TAG, ""+source.toString());
         LsfIndex index = null;
         try {
             index = new LsfIndex(source, IMCDefinition.getInstance());
         } catch (Exception e) {
-            Log.i(TAG, ""+e);
+            Log.i(TAG, "" + e);
             updateBarHandler.postDelayed(new Runnable() {
-
                 @Override
                 public void run() {
                     pDialog.cancel();
                 }
             }, 0);
         }
-
-        m_mra_storage.indexListOfMessage(index);
+        m_mra_storage.indexListOfMessage(index, source);
         checkIndex = true;
     }
 
