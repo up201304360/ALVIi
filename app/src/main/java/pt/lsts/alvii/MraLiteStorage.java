@@ -226,7 +226,6 @@ class MraLiteStorage {
         while(line != null){
             messageList[cnt] = line;
             cnt++;
-            Log.i(TAG, line);
             try {
                 line = reader.readLine();
             } catch (IOException e) {

@@ -112,7 +112,7 @@ public class ReviewOldLogs extends AppCompatActivity {
         //Log.i(TAG, extension);
         if (extension.equals(".txt") || extension.equals(".ini") || extension.equals(".stacktrace"))
             showTextFile(filePath, fileName);
-        else if(extension.equals(".gz") || extension.equals(".lsf"))
+        else if(fileName.substring(fileName.indexOf(".")).equals(".lsf") || fileName.substring(fileName.indexOf(".")).equals(".lsf.gz"))
             mraLite(filePath, fileName);
         else if(extension.equals(".jpg") || extension.equals(".jpeg") || extension.equals(".bmp") || extension.equals(".png"))
             showImage(filePath, fileName);
