@@ -9,7 +9,9 @@ import android.os.Environment;
 import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.View;
 import android.view.WindowManager;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.Toast;
@@ -27,6 +29,9 @@ import java.util.Arrays;
 import java.util.zip.GZIPInputStream;
 
 import pt.lsts.imc.IMCDefinition;
+import pt.lsts.imc.IMCMessage;
+import pt.lsts.imc.IMCMessageType;
+import pt.lsts.imc.lsf.LsfGenericIterator;
 import pt.lsts.imc.lsf.LsfIndex;
 
 public class MRALite extends AppCompatActivity {
@@ -49,8 +54,10 @@ public class MRALite extends AppCompatActivity {
     private Handler customHandler;
     boolean checkIndex = false;
     MraLiteStorage m_mra_storage = new MraLiteStorage(context);
+    MraLiteDisplayPlot m_mra_display = new MraLiteDisplayPlot(context);
     boolean alreadyConverted;
     File logLsf;
+    private LsfIndex m_index;
 
     //Run task periodically
     private Runnable updateTimerThread = new Runnable() {
@@ -112,7 +119,7 @@ public class MRALite extends AppCompatActivity {
                             } catch (Exception e) {
                                 Log.i(TAG, "Error while trying to delete mra/ folder", e);
                             }
-                            startIndex(logLsf);
+                            startIndex(logLsf, true);
                             customHandler.postDelayed(updateTimerThread,2000);
                             checkIndex = true;
                         }
@@ -122,6 +129,7 @@ public class MRALite extends AppCompatActivity {
                             dialog.cancel();
                             updateBarHandler.removeCallbacksAndMessages(null);
                             pDialog.cancel();
+                            startIndex(logLsf, false);
                             m_mra_storage.getListMessgeByOldIndex(logLsf);
                             Log.i(TAG, "Reading Log - Msg " + m_mra_storage.getProcessStageValue() + " of " + m_mra_storage.getNumberMessages());
                             Log.i(TAG, "number of messages: " + m_mra_storage.getNumberOfListMsg());
@@ -135,28 +143,22 @@ public class MRALite extends AppCompatActivity {
         else{
             customHandler.postDelayed(updateTimerThread,2000);
             checkIndex = true;
-            startIndex(logLsf);
+            startIndex(logLsf, true);
         }
     }
 
-    private void startIndex(final File logLsf){
+    private void startIndex(final File logLsf, final boolean fullTask){
         // Since reading log takes more time, let's run it on a separate thread.
         new Thread(new Runnable() {
             @Override
             public void run() {
-                openLog(logLsf);
+                openLog(logLsf, fullTask);
             }
         }).start();
         //openLog(logLsf);
     }
 
-    /**
-     * Does the necessary pre-processing of a log file based on it's extension
-     * Currently supports gzip, bzip2 and no-compression formats.
-     * @param fx
-     * @return True on success, False on failure
-     */
-    public boolean openLog(File fx) {
+    public boolean openLog(File fx, boolean fullTask) {
         File fileToOpen = null;
         updateBarHandler.post(new Runnable() {
             public void run() {
@@ -179,7 +181,7 @@ public class MRALite extends AppCompatActivity {
             return false;
         }
 
-        return openLSF(fileToOpen);
+        return openLSF(fileToOpen, fullTask);
     }
 
     // --- Extractors ---
@@ -289,7 +291,7 @@ public class MRALite extends AppCompatActivity {
      * @param f
      * @return
      */
-    private boolean openLSF(File f) {
+    private boolean openLSF(File f, boolean fullTask) {
         if (!f.exists()) {
             Log.i(TAG, "Invalid LSF file - LSF file does not exist!");
             return false;
@@ -325,14 +327,30 @@ public class MRALite extends AppCompatActivity {
                 Log.i(TAG, "extract FAIL");
         }
 
-        try {
-            openLogSource(f);
-            return true;
+        if(fullTask) {
+            try {
+                openLogSource(f);
+                return true;
+            } catch (Exception e) {
+                Log.i(TAG, "Invalid LSF index " + e.getMessage());
+                return false;
+            }
         }
-        catch (Exception e) {
-            Log.i(TAG, "Invalid LSF index "+ e.getMessage());
-            return false;
+        else{
+            try {
+                m_index = new LsfIndex(f, IMCDefinition.getInstance());
+            } catch (Exception e) {
+                Log.i(TAG, "" + e);
+                updateBarHandler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        pDialog.cancel();
+                    }
+                }, 0);
+            }
         }
+
+        return true;
     }
 
     private void openLogSource(final File source) {
@@ -343,9 +361,9 @@ public class MRALite extends AppCompatActivity {
                     pDialog.setMessage("Indexing Log...");
                 }
             });
-            LsfIndex index = null;
+            //LsfIndex index = null;
             try {
-                index = new LsfIndex(source, IMCDefinition.getInstance());
+                m_index = new LsfIndex(source, IMCDefinition.getInstance());
             } catch (Exception e) {
                 Log.i(TAG, "" + e);
                 updateBarHandler.postDelayed(new Runnable() {
@@ -355,7 +373,8 @@ public class MRALite extends AppCompatActivity {
                     }
                 }, 0);
             }
-            m_mra_storage.indexListOfMessage(index, source);
+            //m_index = index;
+            m_mra_storage.indexListOfMessage(m_index, source);
             checkIndex = true;
         }
         else{
@@ -386,11 +405,26 @@ public class MRALite extends AppCompatActivity {
     }
 
     private void diplayList() {
-        String[] listMessage = Arrays.copyOf(m_mra_storage.getListOfMessages(), m_mra_storage.getNumberOfListMsg());
+        final String[] listMessage = Arrays.copyOf(m_mra_storage.getListOfMessages(), m_mra_storage.getNumberOfListMsg());
         ListView listView = (ListView) findViewById(R.id.msg_list);
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
                 android.R.layout.simple_list_item_1, android.R.id.text1, listMessage);
         // Assign adapter to ListView
         listView.setAdapter(adapter);
+        listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+            @Override
+            public boolean onItemLongClick(AdapterView<?> arg0, View arg1, int pos, long id) {
+                m_mra_display.messageToDisplay(m_index, listMessage[pos]);
+
+                return true;
+            }
+        });
+        listView.setOnItemClickListener(new AdapterView.OnItemClickListener()
+        {
+            public void onItemClick(AdapterView arg0, View arg1, int arg2, long arg3)
+            {
+                Toast.makeText(context, "Long press to select", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 }
