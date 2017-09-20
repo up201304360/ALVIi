@@ -84,6 +84,10 @@
             android:label="ALVIi - MRA Lite"
             android:screenOrientation="portrait" />
         <activity
+            android:name=".DisplayGraph"
+            android:label="ALVIi - MRA Lite"
+            android:screenOrientation="landscape" />
+        <activity
             android:name=".FileChooser"
             android:label="Choose File"
             android:screenOrientation="portrait">

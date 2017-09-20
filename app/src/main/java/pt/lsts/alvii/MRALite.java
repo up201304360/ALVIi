@@ -4,6 +4,7 @@ import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -54,10 +55,10 @@ public class MRALite extends AppCompatActivity {
     private Handler customHandler;
     boolean checkIndex = false;
     MraLiteStorage m_mra_storage = new MraLiteStorage(context);
-    MraLiteDisplayPlot m_mra_display = new MraLiteDisplayPlot(context);
     boolean alreadyConverted;
     File logLsf;
     private LsfIndex m_index;
+    private String m_file_path_index;
 
     //Run task periodically
     private Runnable updateTimerThread = new Runnable() {
@@ -180,7 +181,7 @@ public class MRALite extends AppCompatActivity {
             Log.i(TAG,"Invalid LSF file, LSF file does not exist!");
             return false;
         }
-
+        m_file_path_index = fileToOpen.toString();
         return openLSF(fileToOpen, fullTask);
     }
 
@@ -414,8 +415,13 @@ public class MRALite extends AppCompatActivity {
         listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
             @Override
             public boolean onItemLongClick(AdapterView<?> arg0, View arg1, int pos, long id) {
-                m_mra_display.messageToDisplay(m_index, listMessage[pos]);
-
+                Intent intent = new Intent(MRALite.this, DisplayGraph.class);
+                Bundle b = new Bundle();
+                b.putString("BUNDLE_INDEX_PATH", m_file_path_index);
+                b.putString("BUNDLE_IMCMESSAGE", listMessage[pos]);
+                intent.putExtras(b);
+                startActivity(intent);
+                Log.i(TAG, m_file_path_index );
                 return true;
             }
         });

@@ -17,7 +17,9 @@
         android:textAppearance="@style/TextAppearance.AppCompat.Headline"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp" />
 
     <ImageButton
         android:id="@+id/imageButtonLog"
@@ -31,7 +33,8 @@
         app:layout_constraintLeft_toLeftOf="parent"
         app:srcCompat="@drawable/log"
         android:layout_marginTop="44dp"
-        app:layout_constraintTop_toBottomOf="@+id/progressBarWifi" />
+        app:layout_constraintTop_toBottomOf="@+id/progressBarWifi"
+        android:layout_marginStart="8dp" />
 
     <ImageButton
         android:id="@+id/imageButtonDownload"
@@ -45,7 +48,8 @@
         android:scaleType="fitCenter"
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/progressBarWifi"
-        app:srcCompat="@drawable/download" />
+        app:srcCompat="@drawable/download"
+        android:layout_marginEnd="16dp" />
 
     <ImageButton
         android:id="@+id/imageButtonWifiState"
@@ -60,12 +64,14 @@
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/imageButtonLog"
-        app:srcCompat="@drawable/offline_wifi" />
+        app:srcCompat="@drawable/offline_wifi"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp" />
 
     <ProgressBar
         android:id="@+id/progressBarWifi"
         style="?android:attr/progressBarStyleHorizontal"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="32dp"
         android:layout_marginLeft="16dp"
         android:layout_marginRight="16dp"
@@ -75,7 +81,9 @@
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/textStateNetwork"
-        app:layout_constraintHorizontal_bias="0.0" />
+        app:layout_constraintHorizontal_bias="0.0"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp" />
 
     <TextView
         android:id="@+id/textViewWifiBar"
@@ -89,6 +97,8 @@
         app:layout_constraintBottom_toBottomOf="@+id/progressBarWifi"
         app:layout_constraintLeft_toLeftOf="@+id/progressBarWifi"
         app:layout_constraintRight_toRightOf="@+id/progressBarWifi"
-        app:layout_constraintTop_toTopOf="@+id/progressBarWifi" />
+        app:layout_constraintTop_toTopOf="@+id/progressBarWifi"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp" />
 
 </android.support.constraint.ConstraintLayout>
