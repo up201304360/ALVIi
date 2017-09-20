@@ -56,19 +56,26 @@ public class FileChooser extends ListActivity {
                     if (buf == 0) num_item = num_item + " item";
                     else num_item = num_item + " items";
 
-                    //String formated = lastModDate.toString();
                     dir.add(new Item(ff.getName(), num_item, date_modify, ff.getAbsolutePath(), "directory_icon"));
                 } else {
-                    String extension = ff.getName().substring(ff.getName().lastIndexOf("."));
-                    //Log.i(TAG, extension);
-                    if (extension.equals(".txt"))
-                        fls.add(new Item(ff.getName(), ff.length() + " Byte", date_modify, ff.getAbsolutePath(), "file_icon"));
-                    else if (extension.equals(".ini"))
-                        fls.add(new Item(ff.getName(), ff.length() + " Byte", date_modify, ff.getAbsolutePath(), "config_icon"));
-                    else if (extension.equals(".png") || extension.equals(".jpg") || extension.equals(".JPG") || extension.equals(".PNG"))
-                        fls.add(new Item(ff.getName(), ff.length() + " Byte", date_modify, ff.getAbsolutePath(), "image_icon"));
-                    else
-                        fls.add(new Item(ff.getName(), ff.length() + " Byte", date_modify, ff.getAbsolutePath(), "unknown_icon"));
+                    if(ff.getName().equals("IMC.xml.gz"))
+                        fls.add(new Item(ff.getName(), ff.length() + " Byte", date_modify, ff.getAbsolutePath(), "imc_xml_icon"));
+                    else if(ff.getName().equals("Data.lsf.gz") || ff.getName().equals("Data.lsf"))
+                        fls.add(new Item(ff.getName(), ff.length() + " Byte", date_modify, ff.getAbsolutePath(), "gz_log_icon"));
+                    else {
+                        String extension = ff.getName().substring(ff.getName().lastIndexOf("."));
+                        //Log.i(TAG, extension);
+                        if (extension.equals(".txt"))
+                            fls.add(new Item(ff.getName(), ff.length() + " Byte", date_modify, ff.getAbsolutePath(), "file_icon"));
+                        else if (extension.equals(".xml"))
+                            fls.add(new Item(ff.getName(), ff.length() + " Byte", date_modify, ff.getAbsolutePath(), "xml_icon"));
+                        else if (extension.equals(".ini"))
+                            fls.add(new Item(ff.getName(), ff.length() + " Byte", date_modify, ff.getAbsolutePath(), "config_icon"));
+                        else if (extension.equals(".png") || extension.equals(".jpg") || extension.equals(".JPG") || extension.equals(".PNG"))
+                            fls.add(new Item(ff.getName(), ff.length() + " Byte", date_modify, ff.getAbsolutePath(), "image_icon"));
+                        else
+                            fls.add(new Item(ff.getName(), ff.length() + " Byte", date_modify, ff.getAbsolutePath(), "unknown_icon"));
+                    }
                 }
             }
         } catch (Exception e) {}
