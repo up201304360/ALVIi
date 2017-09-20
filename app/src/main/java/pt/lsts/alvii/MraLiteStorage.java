@@ -3,12 +3,17 @@ package pt.lsts.alvii;
 import android.content.Context;
 import android.util.Log;
 
+import org.xmlpull.v1.XmlPullParser;
+import org.xmlpull.v1.XmlPullParserException;
+import org.xmlpull.v1.XmlPullParserFactory;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 
 import pt.lsts.imc.lsf.LsfIndex;
@@ -23,40 +28,26 @@ class MraLiteStorage {
     private static final String TAG = "MEU MraLiteStorage";
     private LsfIndex m_index;
     private Context m_context;
-    private int numberThread = 4;
-    String messageList[] = new String[512];
-    private String messageListPart[][] = new String[numberThread][512];
-    int cntMsgByTheard[] = new int[numberThread];
+    private String messageList[] = new String[1024];
     private int numberOfMessage = 0;
-    private int split;
-    private int cntThread[] = new int[numberThread];
-    private boolean isThreadFinish[] = new boolean[numberThread];
+    private boolean isFinish;
     private int cntListLog = 0;
-    private File m_file_path;
+    private int cntThread;
+    private String listImcMessagesXMl[] = new String[1024];
 
     public MraLiteStorage(Context context) {
         m_context = context;
-        for(int i = 0; i < numberThread; i++){
-            cntThread[i] = 0;
-            cntMsgByTheard[i] = 0;
-            isThreadFinish[i] = false;
-        }
+        isFinish = false;
+        cntThread = 0;
     }
 
     public void initMraLiteStorage(){
-        for(int i = 0; i < numberThread; i++){
-            cntThread[i] = 0;
-            cntMsgByTheard[i] = 0;
-            isThreadFinish[i] = false;
-        }
+        isFinish = false;
+        cntThread = 0;
     }
 
     public long getProcessStageValue(){
-        long result = 0;
-        for(int i = 0; i < numberThread; i++)
-            result = result + cntThread[i];
-
-        return result + 1;
+        return cntThread;
     }
 
     public int getNumberMessages(){
@@ -65,17 +56,8 @@ class MraLiteStorage {
 
     public int getNumberOfListMsg() { return cntListLog; }
 
-    public boolean isAllThreadFinish(){
-        boolean noRun = true;
-        for(int t = 0; t < numberThread; t ++){
-            if(!isThreadFinish[t])
-                noRun = false;
-        }
-
-        if(noRun)
-            return true;
-        else
-            return false;
+    public boolean isFinish(){
+        return isFinish;
     }
 
     public String[] getListOfMessages(){
@@ -83,116 +65,62 @@ class MraLiteStorage {
     }
 
     public void indexListOfMessage(LsfIndex index, File path) {
+        isFinish = false;
         m_index = index;
         numberOfMessage = m_index.getNumberOfMessages();
-        split = (numberOfMessage / numberThread);
-        // Since reading log takes more time, let's run it on a separate threads.
-        Thread thread1 = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                getPartOfListMessage(1, split, 1, m_index);
-            }
-        });
-        Thread thread2 = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                getPartOfListMessage(split + 1, split * 2, 2,m_index);
-            }
-        });
-        Thread thread3 = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                getPartOfListMessage(split * 2 + 1, split * 3, 3, m_index);
-            }
-        });
-        Thread thread4 = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                getPartOfListMessage(split * 3 + 1, numberOfMessage - 1, 4, m_index);
-            }
-        });
-
-        thread1.start();
-        thread2.start();
-        thread3.start();
-        thread4.start();
-
-        m_file_path = path;
+        getListIMCMesages(index, path);
     }
 
-    private void getPartOfListMessage(int startCnt, int ends, int idThread, LsfIndex t_index){
-        int state_msg;
-        cntThread[idThread - 1] = 0;
-        isThreadFinish[idThread - 1] = false;
-        boolean haveName;
-        String msgName;
-        for(state_msg = startCnt; state_msg <= ends; state_msg++){
-            haveName = false;
-            msgName = t_index.getMessage(state_msg).getAbbrev();
-            if(cntMsgByTheard[idThread - 1] == 0){
-                messageListPart[idThread - 1][cntMsgByTheard[idThread - 1]] = msgName;
-                cntMsgByTheard[idThread - 1]++;
-            }
-            else{
-                for(int i = 0; i < cntMsgByTheard[idThread - 1]; i++)
-                {
-                    if(messageListPart[idThread - 1][i].equals(msgName))
-                        haveName = true;
+    private void getListIMCMesages(LsfIndex index, File source){
+        XmlPullParserFactory pullParserFactory;
+        int cnt = 0;
+        try {
+            pullParserFactory = XmlPullParserFactory.newInstance();
+            XmlPullParser parser = pullParserFactory.newPullParser();
+            InputStream in_s = new FileInputStream(new File(source.getParent(), "imc.xml"));
+            parser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false);
+            parser.setInput(in_s, null);
+            int eventType=parser.getEventType();
+            while(eventType!=XmlPullParser.END_DOCUMENT){
+                String name;
+                switch(eventType){
+                    case XmlPullParser.START_DOCUMENT:
+                        break;
+                    case XmlPullParser.START_TAG:
+                        name = parser.getName();
+                        if(name.equals("message")){
+                            listImcMessagesXMl[cnt++] = parser.getAttributeValue(null,"abbrev");
+                        }
+                        break;
+                    case XmlPullParser.END_TAG:
+                        break;
                 }
-                if(!haveName){
-                    messageListPart[idThread - 1][cntMsgByTheard[idThread - 1]] = msgName;
-                    cntMsgByTheard[idThread - 1]++;
-                }
+                eventType=parser.next();
             }
-            cntThread[idThread - 1]++;
+        } catch (XmlPullParserException e) {
+            Log.i(TAG, "XmlPullParserException: ", e);
+        } catch (IOException e) {
+            Log.i(TAG, "IOException: ", e);
         }
-        //Log.i(TAG, "Finish "+ idThread + " - "+ cntThread[idThread - 1] + "  cnt: " + cntMsgByTheard[idThread - 1]);
-        isThreadFinish[idThread - 1] = true;
-
-        boolean noRun = true;
-        for(int t = 0; t < numberThread; t ++){
-            if(!isThreadFinish[t])
-                noRun = false;
-        }
-        if(noRun)
-            mergeListMessagePart();
+        getListIndexImc(index, source, listImcMessagesXMl, cnt);
     }
 
-    private void mergeListMessagePart() {
-        for(int i = 0; i < cntMsgByTheard[0]; i++)
-            messageList[i] = messageListPart[0][i];
-
-        int size = cntMsgByTheard[0];
-        boolean haveImcMessage;
-
-        for(int r = 1; r < numberThread; r++){
-            try {
-                for (int i = 0; i < cntMsgByTheard[r]; i++) {
-                    //Log.i(TAG, "AQUI "+r+":"+i+" - "+cntMsgByTheard[r] + " S: "+size);
-                    haveImcMessage = false;
-                    for (int t = 0; t < size; t++) {
-                        if (messageList[t].equals(messageListPart[r][i]))
-                            haveImcMessage = true;
-                    }
-                    if (!haveImcMessage) {
-                        messageList[size++] = messageListPart[r][i];
-                    }
-                }
-            }
-            catch (Exception io){
-                Log.i(TAG, "ERROR: "+io);
+    public void getListIndexImc(LsfIndex index, File path, String [] listImcMessages, int cntMessages){
+        int cnt = 0;
+        for(int i = 0; i < cntMessages; i++){
+            if(index.getFirstMessageOfType(listImcMessages[i]) != -1) {
+                messageList[cnt++] = listImcMessages[i];
+                cntThread = cnt - 1;
             }
         }
-        size--;
-        cntListLog = size;
-        File root = new File(m_file_path.getParent());
+        cntListLog = cnt - 1;
+        File root = new File(path.getParent());
         if (!root.exists()) {
             root.mkdirs();
         }
-        File gpxfile = new File(root, "indexMessageList.stackIndex");
         FileWriter writer = null;
         try {
-            writer = new FileWriter(gpxfile);
+            writer = new FileWriter(new File(root, "indexMessageList.stackIndex"));
             for (int i = 0; i < cntListLog; i++)
                 writer.append(messageList[i]+"\n");
             writer.flush();
@@ -200,14 +128,12 @@ class MraLiteStorage {
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+        isFinish = true;
     }
 
     public void getListMessgeByOldIndex(File source){
-        isThreadFinish[0] = false;
-        for(int i = 1; i < numberThread; i++){
-            isThreadFinish[i] = true;
-        }
-        Log.i(TAG, "EXIST: "+source.getParent().toString());
+        isFinish = false;
         int cnt = 0;
         File gpxfile = new File(source.getParent(), "indexMessageList.stackIndex");
         FileInputStream is = null;
@@ -233,6 +159,7 @@ class MraLiteStorage {
             }
         }
         cntListLog = cnt;
+        isFinish = true;
     }
 
             /*double endTime = index.getEndTime();

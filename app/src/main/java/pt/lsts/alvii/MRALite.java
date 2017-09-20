@@ -12,6 +12,7 @@ import android.util.Log;
 import android.view.WindowManager;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
+import android.widget.Toast;
 
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
@@ -19,9 +20,11 @@ import org.apache.commons.io.FileUtils;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
+import java.util.zip.GZIPInputStream;
 
 import pt.lsts.imc.IMCDefinition;
 import pt.lsts.imc.lsf.LsfIndex;
@@ -46,15 +49,16 @@ public class MRALite extends AppCompatActivity {
     private Handler customHandler;
     boolean checkIndex = false;
     MraLiteStorage m_mra_storage = new MraLiteStorage(context);
-    private boolean alreadyConverted;
+    boolean alreadyConverted;
+    File logLsf;
 
     //Run task periodically
     private Runnable updateTimerThread = new Runnable() {
         public void run() {
             if(checkIndex) {
-                if (m_mra_storage.isAllThreadFinish()) {
-                    Log.i(TAG, "Reading Log - Msg " + m_mra_storage.getProcessStageValue() + " of " + m_mra_storage.getNumberMessages());
-                    Log.i(TAG, "number of messages: " + m_mra_storage.getNumberOfListMsg());
+                if (m_mra_storage.isFinish()) {
+                    //Log.i(TAG, "Reading Log - Msg List " + m_mra_storage.getProcessStageValue() + " Total msg " + m_mra_storage.getNumberMessages());
+                    //Log.i(TAG, "number of messages: " + m_mra_storage.getNumberOfListMsg());
                     updateBarHandler.removeCallbacksAndMessages(null);
                     pDialog.cancel();
                     checkIndex = false;
@@ -64,7 +68,7 @@ public class MRALite extends AppCompatActivity {
                     updateBarHandler.post(new Runnable() {
                         public void run() {
                             if (state_msg >= 0)
-                                pDialog.setMessage("Reading Log - Msg " + m_mra_storage.getProcessStageValue() + " of " + m_mra_storage.getNumberMessages());
+                                pDialog.setMessage("Reading Log - Number Msg detected: " + m_mra_storage.getProcessStageValue());
                         }
                     });
                 }
@@ -92,14 +96,14 @@ public class MRALite extends AppCompatActivity {
         pDialog.setCancelable(false);
         pDialog.show();
         updateBarHandler =new Handler();
-        final File logLsf = new File(path + File.separator + file_name);
+        logLsf = new File(path + File.separator + file_name);
 
         File file = new File(logLsf.getParent(), "indexMessageList.stackIndex");
         if(file.exists()) {
             AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(context);
             alertDialogBuilder.setTitle("Log Index");
             alertDialogBuilder
-                    .setMessage("Log already Index!\nIndex again?")
+                    .setMessage("Log already Index!\n\nIndex again?")
                     .setCancelable(false)
                     .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
                         public void onClick(DialogInterface dialog, int id) {
@@ -203,9 +207,7 @@ public class MRALite extends AppCompatActivity {
             FilterCopyDataMonitor fis = createCopyMonitor(gzDataLog);
             StreamUtil.copyStreamToFile(fis, outputFile);
 
-            File res = new File(f.getParent(), "Data.lsf");
-
-            return res;
+            return new File(f.getParent(), "Data.lsf");
         }
         catch (Exception ioe) {
             Log.i(TAG, "Exception has been thrown Decompressing LSF Data..." + "   " + ioe);
@@ -223,10 +225,6 @@ public class MRALite extends AppCompatActivity {
         }
     }
 
-    /**
-     * @param stream
-     * @return
-     */
     private FilterCopyDataMonitor createCopyMonitor(InputStream stream) {
         FilterCopyDataMonitor fis = new FilterCopyDataMonitor(stream) {
             long targetStep = 1 * 1024 * 1024;
@@ -249,7 +247,6 @@ public class MRALite extends AppCompatActivity {
      * @return decompressed file
      */
     private File extractBzip2(File f) {
-        //Log.i(TAG, "Decompressing BZip2 LSF Data...");
         updateBarHandler.post(new Runnable() {
             public void run() {
                 pDialog.setMessage("Decompressing BZip2 LSF Data...");
@@ -297,15 +294,13 @@ public class MRALite extends AppCompatActivity {
             Log.i(TAG, "Invalid LSF file - LSF file does not exist!");
             return false;
         }
-
-        //Log.i(TAG, "Loading LSF Data");
         updateBarHandler.post(new Runnable() {
             public void run() {
                 pDialog.setMessage("Loading LSF Data...");
             }
         });
 
-        final File lsfDir = f.getParentFile();
+        File lsfDir = f.getParentFile();
         alreadyConverted = false;
         if (lsfDir.isDirectory()) {
             if (new File(lsfDir, "mra/lsf.index").canRead())
@@ -323,8 +318,14 @@ public class MRALite extends AppCompatActivity {
             }
         }
 
+        if (!new File(lsfDir, "imc.xml").canRead()) {
+            if (extractGz(lsfDir, "imc.xml"))
+                Log.i(TAG, "extract OK");
+            else
+                Log.i(TAG, "extract FAIL");
+        }
+
         try {
-            //Log.i(TAG, "Indexing log");
             openLogSource(f);
             return true;
         }
@@ -335,27 +336,53 @@ public class MRALite extends AppCompatActivity {
     }
 
     private void openLogSource(final File source) {
-        m_mra_storage.initMraLiteStorage();
-        updateBarHandler.post(new Runnable() {
-            public void run() {
-                pDialog.setMessage("Indexing Log...");
-            }
-        });
-        //Log.i(TAG, ""+source.toString());
-        LsfIndex index = null;
-        try {
-            index = new LsfIndex(source, IMCDefinition.getInstance());
-        } catch (Exception e) {
-            Log.i(TAG, "" + e);
-            updateBarHandler.postDelayed(new Runnable() {
-                @Override
+        if (new File(source.getParent(), "imc.xml").canRead()) {
+            m_mra_storage.initMraLiteStorage();
+            updateBarHandler.post(new Runnable() {
                 public void run() {
-                    pDialog.cancel();
+                    pDialog.setMessage("Indexing Log...");
                 }
-            }, 0);
+            });
+            LsfIndex index = null;
+            try {
+                index = new LsfIndex(source, IMCDefinition.getInstance());
+            } catch (Exception e) {
+                Log.i(TAG, "" + e);
+                updateBarHandler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        pDialog.cancel();
+                    }
+                }, 0);
+            }
+            m_mra_storage.indexListOfMessage(index, source);
+            checkIndex = true;
         }
-        m_mra_storage.indexListOfMessage(index, source);
-        checkIndex = true;
+        else{
+            Toast.makeText(this, "no imc.xml / IMC.xml.gz found!!!", Toast.LENGTH_SHORT).show();
+            updateBarHandler.removeCallbacksAndMessages(null);
+            pDialog.cancel();
+            checkIndex = false;
+        }
+    }
+
+    private boolean extractGz(File pathGz, String nameNewFile){
+        try {
+            FileInputStream fis = new FileInputStream(new File(pathGz, "IMC.xml.gz"));
+            GZIPInputStream gis = new GZIPInputStream(fis);
+            FileOutputStream fos = new FileOutputStream(pathGz + File.separator + nameNewFile);
+            byte[] buffer = new byte[1024];
+            int len;
+            while((len = gis.read(buffer)) != -1){
+                fos.write(buffer, 0, len);
+            }
+            fos.close();
+            gis.close();
+        } catch (IOException e) {
+            Log.i(TAG, "", e);
+            return false;
+        }
+        return true;
     }
 
     private void diplayList() {
