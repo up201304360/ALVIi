@@ -21,11 +21,13 @@ import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 import org.apache.commons.io.FileUtils;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.Arrays;
 import java.util.zip.GZIPInputStream;
 
@@ -59,6 +61,9 @@ public class MRALite extends AppCompatActivity {
     File logLsf;
     private LsfIndex m_index;
     private String m_file_path_index;
+    private boolean checkOutput = false;
+    private Process process;
+    private BufferedReader bufferedReader;
 
     //Run task periodically
     private Runnable updateTimerThread = new Runnable() {
@@ -76,9 +81,38 @@ public class MRALite extends AppCompatActivity {
                     updateBarHandler.post(new Runnable() {
                         public void run() {
                             if (state_msg >= 0)
-                                pDialog.setMessage("Reading Log - Number Msg detected: " + m_mra_storage.getProcessStageValue());
+                                pDialog.setMessage("Reading Log - Number Msg detected: " + m_mra_storage.getProcessStageValue() +
+                                " ( " + m_mra_storage.getCntStateImcMsg() + " of " + m_mra_storage.getCntListFullImcMsg() + " )");
                         }
                     });
+                }
+            }
+
+            if(checkOutput){
+                try {
+                    process = Runtime.getRuntime().exec("logcat -d -t 1");
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                bufferedReader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                String line;
+                String textString = "";
+                try {
+                    while ((line = bufferedReader.readLine()) != null) {
+                        textString = line;
+                    }
+                    line = "[LsfIndex]";
+                    if(textString.toLowerCase().contains(line.toLowerCase())){
+                        final String finalTextString = textString;
+                        updateBarHandler.post(new Runnable() {
+                            public void run() {
+                                if (state_msg >= 0)
+                                    pDialog.setMessage(finalTextString.split("]")[1].trim());
+                            }
+                        });
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
             }
             customHandler.postDelayed(this, 1000);
@@ -122,7 +156,7 @@ public class MRALite extends AppCompatActivity {
                             }
                             startIndex(logLsf, true);
                             customHandler.postDelayed(updateTimerThread,2000);
-                            checkIndex = true;
+                            checkIndex = false;
                         }
                     })
                     .setNegativeButton("No", new DialogInterface.OnClickListener() {
@@ -143,7 +177,7 @@ public class MRALite extends AppCompatActivity {
         }
         else{
             customHandler.postDelayed(updateTimerThread,2000);
-            checkIndex = true;
+            checkIndex = false;
             startIndex(logLsf, true);
         }
     }
@@ -339,7 +373,10 @@ public class MRALite extends AppCompatActivity {
         }
         else{
             try {
+                checkOutput = true;
                 m_index = new LsfIndex(f, IMCDefinition.getInstance());
+                checkOutput = false;
+                checkIndex = true;
             } catch (Exception e) {
                 Log.i(TAG, "" + e);
                 updateBarHandler.postDelayed(new Runnable() {
@@ -362,9 +399,10 @@ public class MRALite extends AppCompatActivity {
                     pDialog.setMessage("Indexing Log...");
                 }
             });
-            //LsfIndex index = null;
             try {
+                checkOutput = true;
                 m_index = new LsfIndex(source, IMCDefinition.getInstance());
+                checkOutput = false;
             } catch (Exception e) {
                 Log.i(TAG, "" + e);
                 updateBarHandler.postDelayed(new Runnable() {
@@ -374,9 +412,8 @@ public class MRALite extends AppCompatActivity {
                     }
                 }, 0);
             }
-            //m_index = index;
-            m_mra_storage.indexListOfMessage(m_index, source);
             checkIndex = true;
+            m_mra_storage.indexListOfMessage(m_index, source);
         }
         else{
             Toast.makeText(this, "no imc.xml / IMC.xml.gz found!!!", Toast.LENGTH_SHORT).show();
@@ -421,7 +458,7 @@ public class MRALite extends AppCompatActivity {
                 b.putString("BUNDLE_IMCMESSAGE", listMessage[pos]);
                 intent.putExtras(b);
                 startActivity(intent);
-                Log.i(TAG, m_file_path_index );
+                //Log.i(TAG, m_file_path_index );
                 return true;
             }
         });

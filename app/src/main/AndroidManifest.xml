@@ -47,6 +47,7 @@
         android:roundIcon="@mipmap/icon"
         android:screenOrientation="portrait"
         android:supportsRtl="true"
+        android:largeHeap="true"
         android:theme="@style/AppTheme">
         <activity
             android:name=".AlviiMain"
@@ -82,6 +83,7 @@
         <activity
             android:name=".MRALite"
             android:label="ALVIi - MRA Lite"
+            android:largeHeap="true"
             android:screenOrientation="portrait" />
         <activity
             android:name=".DisplayGraph"

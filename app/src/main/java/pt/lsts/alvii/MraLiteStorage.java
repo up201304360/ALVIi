@@ -16,6 +16,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 
+import pt.lsts.imc.IMCDefinition;
+import pt.lsts.imc.IMCMessage;
 import pt.lsts.imc.lsf.LsfIndex;
 
 /**
@@ -34,11 +36,15 @@ class MraLiteStorage {
     private int cntListLog = 0;
     private int cntThread;
     private String listImcMessagesXMl[] = new String[1024];
+    int cntFullIMC;
+    int cntStateImcMsg;
 
     public MraLiteStorage(Context context) {
         m_context = context;
         isFinish = false;
         cntThread = 0;
+        cntStateImcMsg = 0;
+        cntFullIMC = 0;
     }
 
     public void initMraLiteStorage(){
@@ -46,8 +52,8 @@ class MraLiteStorage {
         cntThread = 0;
     }
 
-    public long getProcessStageValue(){
-        return cntThread;
+    public long getProcessStageValue(){;
+        return cntThread ;
     }
 
     public int getNumberMessages(){
@@ -105,20 +111,31 @@ class MraLiteStorage {
         getListIndexImc(index, source, listImcMessagesXMl, cnt);
     }
 
+    public int getCntListFullImcMsg(){
+        return cntFullIMC;
+    }
+
+    public int getCntStateImcMsg(){
+        return cntStateImcMsg;
+    }
+
     public void getListIndexImc(LsfIndex index, File path, String [] listImcMessages, int cntMessages){
+        cntFullIMC = cntMessages;
         int cnt = 0;
-        for(int i = 0; i < cntMessages; i++){
-            if(index.getFirstMessageOfType(listImcMessages[i]) != -1) {
+        for(int i = 0; i < cntMessages; i++) {
+            if (index.containsMessagesOfType(listImcMessages[i])) {
                 messageList[cnt++] = listImcMessages[i];
                 cntThread = cnt - 1;
             }
+            cntStateImcMsg++;
         }
         cntListLog = cnt - 1;
+
         File root = new File(path.getParent());
         if (!root.exists()) {
             root.mkdirs();
         }
-        FileWriter writer = null;
+        FileWriter writer;
         try {
             writer = new FileWriter(new File(root, "indexMessageList.stackIndex"));
             for (int i = 0; i < cntListLog; i++)
