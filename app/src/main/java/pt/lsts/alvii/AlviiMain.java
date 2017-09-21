@@ -88,8 +88,9 @@ public class AlviiMain extends Activity {
         isStop = false;
 
         if(Build.VERSION.SDK_INT <= 19){
-            customHandler = new android.os.Handler();
-            customHandler.postDelayed(updateTimerThread,0);
+            checkConnections();
+            //customHandler = new android.os.Handler();
+            //customHandler.postDelayed(updateTimerThread,0);
         }
         else {
             requestForSpecificPermission();
@@ -175,45 +176,50 @@ public class AlviiMain extends Activity {
         if (!result_permission) {
             close_app();
         } else {
-            if (isWifiAvailable() && isNetworkAvailable()) {
-                boolean success;
-                if (!storageDir.exists()) {
-                    Log.i(TAG, "Creating foler");
-                    success = storageDir.mkdirs();
-                    if (success)
-                        Log.i(TAG, "Folder created");
-                    else {
-                        Log.i(TAG, "Error creating folder");
-                        showErrorInfo("Error creating folder");
-                    }
+            checkConnections();
+        }
+    }
+
+    private void checkConnections(){
+        if (isWifiAvailable() && isNetworkAvailable()) {
+            boolean success;
+            if (!storageDir.exists()) {
+                Log.i(TAG, "Creating foler");
+                success = storageDir.mkdirs();
+                if (success)
+                    Log.i(TAG, "Folder created");
+                else {
+                    Log.i(TAG, "Error creating folder");
+                    showErrorInfo("Error creating folder");
                 }
-                isInitDone = true;
-                customHandler = new android.os.Handler();
-                customHandler.postDelayed(updateTimerThread, 0);
-            } else {
-                boolean success;
-                if (!storageDir.exists()) {
-                    Log.i(TAG, "Creating foler");
-                    success = storageDir.mkdirs();
-                    if (success)
-                        Log.i(TAG, "Folder created");
-                    else {
-                        Log.i(TAG, "Error creating folder");
-                        showErrorInfo("Error creating folder");
-                    }
-                }
-                //showErrorInfo("Please turn on Wifi");
-                Toast.makeText(this, "No network available...\nPlease turn on Wifi", Toast.LENGTH_SHORT).show();
-                Toast.makeText(this, "Going in Offline Mode !!!", Toast.LENGTH_SHORT).show();
-                final Handler handler = new Handler();
-                handler.postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        Intent intent = new Intent(AlviiMain.this, OfflineMode.class);
-                        startActivity(intent);
-                    }
-                }, 2000);
             }
+            isInitDone = true;
+            customHandler = new android.os.Handler();
+            customHandler.postDelayed(updateTimerThread, 0);
+        }
+        else {
+            boolean success;
+            if (!storageDir.exists()) {
+                Log.i(TAG, "Creating foler");
+                success = storageDir.mkdirs();
+                if (success)
+                    Log.i(TAG, "Folder created");
+                else {
+                    Log.i(TAG, "Error creating folder");
+                    showErrorInfo("Error creating folder");
+                }
+            }
+            //showErrorInfo("Please turn on Wifi");
+            Toast.makeText(this, "No network available...\nPlease turn on Wifi", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Going in Offline Mode !!!", Toast.LENGTH_SHORT).show();
+            final Handler handler = new Handler();
+            handler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    Intent intent = new Intent(AlviiMain.this, OfflineMode.class);
+                    startActivity(intent);
+                }
+            }, 2000);
         }
     }
 
